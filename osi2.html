@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OSI Model Interactive Presentation</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Space Grotesk', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    
+    .layer-card {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    
+    .layer-card:hover {
+      transform: translateX(8px) scale(1.02);
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .layer-card.active {
+      transform: scale(1.03);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    }
+    
+    .data-flow {
+      animation: flowDown 2s ease-in-out infinite;
+    }
+    
+    @keyframes flowDown {
+      0%, 100% { opacity: 0.3; transform: translateY(-10px); }
+      50% { opacity: 1; transform: translateY(10px); }
+    }
+    
+    .pulse-dot {
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.5); opacity: 1; }
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .detail-panel {
+      animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .protocol-tag {
+      transition: all 0.2s ease;
+    }
+    
+    .protocol-tag:hover {
+      transform: scale(1.1);
+    }
+    
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #1a1a2e; }
+    ::-webkit-scrollbar-thumb { background: #4a4a6a; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #5a5a7a; }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-slate-900 text-white overflow-auto">
+  <div id="app-container" class="min-h-full w-full" style="background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0d0d1a 100%);"><!-- Header -->
+   <header class="text-center py-8 px-4 border-b border-slate-700/50">
+    <div class="flex items-center justify-center gap-3 mb-3">
+     <div class="w-3 h-3 rounded-full bg-emerald-400 pulse-dot"></div>
+     <div class="w-3 h-3 rounded-full bg-cyan-400 pulse-dot" style="animation-delay: 0.3s;"></div>
+     <div class="w-3 h-3 rounded-full bg-violet-400 pulse-dot" style="animation-delay: 0.6s;"></div>
+    </div>
+    <h1 id="main-title" class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-400 bg-clip-text text-transparent mb-2">OSI Model</h1>
+    <p id="subtitle" class="text-slate-400 text-lg">The 7 Layers of Network Communication</p>
+    <p class="text-slate-500 text-sm mt-2 mono">Click any layer to explore details →</p>
+   </header><!-- Main Content -->
+   <main class="flex flex-col lg:flex-row gap-6 p-6 max-w-7xl mx-auto"><!-- Layers Stack -->
+    <div class="flex-1 space-y-3">
+     <div class="flex items-center gap-2 mb-4">
+      <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg><span class="text-slate-300 font-medium">Network Layers</span> <span class="text-xs text-slate-500 mono ml-auto">TOP → BOTTOM = Send | BOTTOM → TOP = Receive</span>
+     </div><!-- Layer 7 -->
+     <div class="layer-card rounded-xl p-4 border-2 border-rose-500/30 bg-gradient-to-r from-rose-500/10 to-rose-600/5" data-layer="7" onclick="showLayer(7)">
+      <div class="flex items-center gap-4">
+       <div class="w-14 h-14 rounded-lg bg-rose-500/20 flex items-center justify-center text-2xl font-bold text-rose-400 mono">
+        7
+       </div>
+       <div class="flex-1">
+        <h3 class="text-lg font-semibold text-rose-300">Application Layer</h3>
+        <p class="text-sm text-slate-400">User interface &amp; network services</p>
+       </div>
+       <div class="text-rose-400/50 data-flow">
+        ↓
+       </div>
+      </div>
+     </div><!-- Layer 6 -->
+     <div class="layer-card rounded-xl p-4 border-2 border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-orange-600/5" data-layer="6" onclick="showLayer(6)">
+      <div class="flex items-center gap-4">
+       <div class="w-14 h-14 rounded-lg bg-orange-500/20 flex items-center justify-center text-2xl font-bold text-orange-400 mono">
+        6
+       </div>
+       <div class="flex-1">
+        <h3 class="text-lg font-semibold text-orange-300">Presentation Layer</h3>
+        <p class="text-sm text-slate-400">Data formatting &amp; encryption</p>
+       </div>
+       <div class="text-orange-400/50 data-flow" style="animation-delay: 0.1s;">
+        ↓
+       </div>
+      </div>
+     </div><!-- Layer 5 -->
+     <div class="layer-card rounded-xl p-4 border-2 border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-amber-600/5" data-layer="5" onclick="showLayer(5)">
+      <div class="flex items-center gap-4">
+       <div class="w-14 h-14 rounded-lg bg-amber-500/20 flex items-center justify-center text-2xl font-bold text-amber-400 mono">
+        5
+       </div>
+       <div class="flex-1">
+        <h3 class="text-lg font-semibold text-amber-300">Session Layer</h3>
+        <p class="text-sm text-slate-400">Connection management</p>
+       </div>
+       <div class="text-amber-400/50 data-flow" style="animation-delay: 0.2s;">
+        ↓
+       </div>
+      </div>
+     </div><!-- Layer 4 -->
+     <div class="layer-card rounded-xl p-4 border-2 border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 to-emerald-600/5" data-layer="4" onclick="showLayer(4)">
+      <div class="flex items-center gap-4">
+       <div class="w-14 h-14 rounded-lg bg-emerald-500/20 flex items-center justify-center text-2xl font-bold text-emerald-400 mono">
+        4
+       </div>
+       <div class="flex-1">
+        <h3 class="text-lg font-semibold text-emerald-300">Transport Layer</h3>
+        <p class="text-sm text-slate-400">End-to-end data delivery</p>
+       </div>
+       <div class="text-emerald-400/50 data-flow" style="animation-delay: 0.3s;">
+        ↓
+       </div>
+      </div>
+     </div><!-- Layer 3 -->
+     <div class="layer-card rounded-xl p-4 border-2 border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 to-cyan-600/5" data-layer="3" onclick="showLayer(3)">
+      <div class="flex items-center gap-4">
+       <div class="w-14 h-14 rounded-lg bg-cyan-500/20 flex items-center justify-center text-2xl font-bold text-cyan-400 mono">
+        3
+       </div>
+       <div class="flex-1">
+        <h3 class="text-lg font-semibold text-cyan-300">Network Layer</h3>
+        <p class="text-sm text-slate-400">Routing &amp; logical addressing</p>
+       </div>
+       <div class="text-cyan-400/50 data-flow" style="animation-delay: 0.4s;">
+        ↓
+       </div>
+      </div>
+     </div><!-- Layer 2 -->
+     <div class="layer-card rounded-xl p-4 border-2 border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-blue-600/5" data-layer="2" onclick="showLayer(2)">
+      <div class="flex items-center gap-4">
+       <div class="w-14 h-14 rounded-lg bg-blue-500/20 flex items-center justify-center text-2xl font-bold text-blue-400 mono">
+        2
+       </div>
+       <div class="flex-1">
+        <h3 class="text-lg font-semibold text-blue-300">Data Link Layer</h3>
+        <p class="text-sm text-slate-400">Frame transmission &amp; MAC addressing</p>
+       </div>
+       <div class="text-blue-400/50 data-flow" style="animation-delay: 0.5s;">
+        ↓
+       </div>
+      </div>
+     </div><!-- Layer 1 -->
+     <div class="layer-card rounded-xl p-4 border-2 border-violet-500/30 bg-gradient-to-r from-violet-500/10 to-violet-600/5" data-layer="1" onclick="showLayer(1)">
+      <div class="flex items-center gap-4">
+       <div class="w-14 h-14 rounded-lg bg-violet-500/20 flex items-center justify-center text-2xl font-bold text-violet-400 mono">
+        1
+       </div>
+       <div class="flex-1">
+        <h3 class="text-lg font-semibold text-violet-300">Physical Layer</h3>
+        <p class="text-sm text-slate-400">Raw bit transmission</p>
+       </div>
+       <div class="text-violet-400/50">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+       </div>
+      </div>
+     </div>
+    </div><!-- Detail Panel -->
+    <div id="detail-panel" class="lg:w-96 bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6 backdrop-blur-sm">
+     <div id="detail-content" class="text-center py-12">
+      <svg class="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+      </svg>
+      <p class="text-slate-500">Select a layer to view details</p>
+      <p class="text-slate-600 text-sm mt-2">Click on any layer card on the left</p>
+     </div>
+    </div>
+   </main><!-- Quick Reference Footer -->
+   <footer class="border-t border-slate-700/50 p-6 mt-6">
+    <div class="max-w-7xl mx-auto">
+     <h3 class="text-lg font-semibold text-slate-300 mb-4 text-center">🧠 Quick Memory Trick</h3>
+     <div class="flex flex-wrap justify-center gap-4">
+      <div class="bg-slate-800/50 rounded-lg px-4 py-3 border border-slate-700/30">
+       <p class="text-sm text-slate-400 mb-1">Top → Bottom (Sending)</p>
+       <p class="mono text-emerald-400 font-medium">"All People Seem To Need Data Processing"</p>
+      </div>
+      <div class="bg-slate-800/50 rounded-lg px-4 py-3 border border-slate-700/30">
+       <p class="text-sm text-slate-400 mb-1">Bottom → Top (Receiving)</p>
+       <p class="mono text-cyan-400 font-medium">"Please Do Not Throw Sausage Pizza Away"</p>
+      </div>
+     </div>
+    </div>
+   </footer>
+  </div>
+  <script>
+    const defaultConfig = {
+      main_title: 'OSI Model',
+      subtitle: 'The 7 Layers of Network Communication',
+      primary_color: '#0f0f23',
+      secondary_color: '#1e293b',
+      text_color: '#e2e8f0',
+      accent_color: '#22d3ee',
+      highlight_color: '#a78bfa',
+      font_family: 'Space Grotesk',
+      font_size: 16
+    };
+
+    const layerData = {
+      7: {
+        name: 'Application Layer',
+        color: 'rose',
+        dataUnit: 'Data',
+        description: 'The Application layer is the closest to the end user. It provides network services directly to user applications.',
+        functions: [
+          'Provides user interface for network services',
+          'Handles high-level protocols for resource sharing',
+          'Manages network transparency and access',
+          'Supports email, file transfer, and web browsing'
+        ],
+        protocols: ['HTTP', 'HTTPS', 'FTP', 'SMTP', 'DNS', 'DHCP', 'SSH', 'Telnet', 'SNMP'],
+        devices: ['Computers', 'Servers', 'Mobile Devices', 'IoT Devices'],
+        realExample: 'When you open a web browser and type a URL, the Application layer processes your request using HTTP/HTTPS protocols.',
+        icon: '🌐'
+      },
+      6: {
+        name: 'Presentation Layer',
+        color: 'orange',
+        dataUnit: 'Data',
+        description: 'The Presentation layer acts as a translator between the application and network. It handles data formatting, encryption, and compression.',
+        functions: [
+          'Data translation and format conversion',
+          'Data encryption and decryption',
+          'Data compression and decompression',
+          'Character code translation (ASCII, EBCDIC)'
+        ],
+        protocols: ['SSL/TLS', 'JPEG', 'GIF', 'PNG', 'MPEG', 'ASCII', 'MIME'],
+        devices: ['Gateway', 'Encryption Devices'],
+        realExample: 'When you access a secure website (HTTPS), this layer encrypts your data using SSL/TLS before transmission.',
+        icon: '🔐'
+      },
+      5: {
+        name: 'Session Layer',
+        color: 'amber',
+        dataUnit: 'Data',
+        description: 'The Session layer establishes, manages, and terminates connections between applications. It controls dialogues between computers.',
+        functions: [
+          'Session establishment and maintenance',
+          'Session termination and recovery',
+          'Synchronization with checkpoints',
+          'Dialog control (simplex, half-duplex, full-duplex)'
+        ],
+        protocols: ['NetBIOS', 'RPC', 'PPTP', 'SAP', 'SDP', 'NFS'],
+        devices: ['Gateway'],
+        realExample: 'During a video call, the Session layer maintains your connection and can recover if the connection is briefly interrupted.',
+        icon: '🤝'
+      },
+      4: {
+        name: 'Transport Layer',
+        color: 'emerald',
+        dataUnit: 'Segments',
+        description: 'The Transport layer ensures complete data transfer with error recovery. It provides end-to-end communication control.',
+        functions: [
+          'Segmentation and reassembly of data',
+          'Error detection and correction',
+          'Flow control to prevent overflow',
+          'Connection-oriented (TCP) or connectionless (UDP) service'
+        ],
+        protocols: ['TCP', 'UDP', 'SCTP', 'DCCP'],
+        devices: ['Firewall', 'Load Balancer'],
+        realExample: 'When downloading a file, TCP ensures all packets arrive correctly and in order. For live streaming, UDP is used for speed.',
+        icon: '📦'
+      },
+      3: {
+        name: 'Network Layer',
+        color: 'cyan',
+        dataUnit: 'Packets',
+        description: 'The Network layer handles logical addressing and routing. It determines the best path for data to travel across networks.',
+        functions: [
+          'Logical addressing (IP addresses)',
+          'Routing packets between networks',
+          'Path determination and selection',
+          'Packet forwarding and fragmentation'
+        ],
+        protocols: ['IP (IPv4/IPv6)', 'ICMP', 'OSPF', 'BGP', 'RIP', 'ARP', 'IPSec'],
+        devices: ['Router', 'Layer 3 Switch', 'Firewall'],
+        realExample: 'When you send an email, routers use IP addresses to determine the best path for your data across the internet.',
+        icon: '🗺️'
+      },
+      2: {
+        name: 'Data Link Layer',
+        color: 'blue',
+        dataUnit: 'Frames',
+        description: 'The Data Link layer provides node-to-node data transfer and handles error correction from the Physical layer.',
+        functions: [
+          'Frame creation and synchronization',
+          'Physical addressing (MAC addresses)',
+          'Error detection (CRC checks)',
+          'Media access control (CSMA/CD)'
+        ],
+        protocols: ['Ethernet', 'Wi-Fi (802.11)', 'PPP', 'HDLC', 'Frame Relay', 'ATM'],
+        devices: ['Switch', 'Bridge', 'NIC (Network Interface Card)', 'Access Point'],
+        realExample: 'Your Wi-Fi router uses MAC addresses to direct data frames to the correct device on your local network.',
+        icon: '🔗'
+      },
+      1: {
+        name: 'Physical Layer',
+        color: 'violet',
+        dataUnit: 'Bits',
+        description: 'The Physical layer deals with the physical connection and transmission of raw binary data over network media.',
+        functions: [
+          'Bit-by-bit transmission',
+          'Physical topology definition',
+          'Transmission mode (simplex, duplex)',
+          'Signal encoding and modulation'
+        ],
+        protocols: ['Ethernet Physical', 'USB', 'Bluetooth', 'DSL', 'ISDN', '802.11 Physical'],
+        devices: ['Hub', 'Repeater', 'Modem', 'Cables', 'Connectors'],
+        realExample: 'The ethernet cable connecting your computer to a router operates at this layer, transmitting electrical signals.',
+        icon: '⚡'
+      }
+    };
+
+    let activeLayer = null;
+
+    function showLayer(layerNum) {
+      const layer = layerData[layerNum];
+      
+      // Update active states
+      document.querySelectorAll('.layer-card').forEach(card => {
+        card.classList.remove('active');
+        if (parseInt(card.dataset.layer) === layerNum) {
+          card.classList.add('active');
+        }
+      });
+      
+      activeLayer = layerNum;
+      
+      const colorClasses = {
+        rose: { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/30' },
+        orange: { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30' },
+        amber: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' },
+        emerald: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+        cyan: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30' },
+        blue: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' },
+        violet: { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30' }
+      };
+      
+      const colors = colorClasses[layer.color];
+      
+      const detailContent = document.getElementById('detail-content');
+      detailContent.innerHTML = `
+        <div class="detail-panel">
+          <!-- Header -->
+          <div class="flex items-center gap-3 mb-4">
+            <span class="text-3xl">${layer.icon}</span>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="mono ${colors.text} text-sm font-bold">Layer ${layerNum}</span>
+                <span class="px-2 py-0.5 ${colors.bg} ${colors.text} rounded text-xs mono">${layer.dataUnit}</span>
+              </div>
+              <h2 class="text-xl font-bold ${colors.text}">${layer.name}</h2>
+            </div>
+          </div>
+          
+          <!-- Description -->
+          <p class="text-slate-300 text-sm leading-relaxed mb-4">${layer.description}</p>
+          
+          <!-- Functions -->
+          <div class="mb-4">
+            <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">Key Functions</h3>
+            <ul class="space-y-1">
+              ${layer.functions.map(func => `
+                <li class="flex items-start gap-2 text-sm text-slate-300">
+                  <span class="${colors.text}">•</span>
+                  <span>${func}</span>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+          
+          <!-- Protocols -->
+          <div class="mb-4">
+            <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">Protocols</h3>
+            <div class="flex flex-wrap gap-2">
+              ${layer.protocols.map(protocol => `
+                <span class="protocol-tag px-2 py-1 ${colors.bg} ${colors.text} rounded text-xs mono cursor-default">${protocol}</span>
+              `).join('')}
+            </div>
+          </div>
+          
+          <!-- Devices -->
+          <div class="mb-4">
+            <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">Devices</h3>
+            <div class="flex flex-wrap gap-2">
+              ${layer.devices.map(device => `
+                <span class="px-2 py-1 bg-slate-700/50 text-slate-300 rounded text-xs">${device}</span>
+              `).join('')}
+            </div>
+          </div>
+          
+          <!-- Real World Example -->
+          <div class="mt-4 p-3 ${colors.bg} rounded-lg border ${colors.border}">
+            <h3 class="text-sm font-semibold ${colors.text} mb-1">💡 Real World Example</h3>
+            <p class="text-sm text-slate-300">${layer.realExample}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    async function onConfigChange(config) {
+      const mainTitle = document.getElementById('main-title');
+      const subtitle = document.getElementById('subtitle');
+      const appContainer = document.getElementById('app-container');
+      
+      if (mainTitle) {
+        mainTitle.textContent = config.main_title || defaultConfig.main_title;
+      }
+      if (subtitle) {
+        subtitle.textContent = config.subtitle || defaultConfig.subtitle;
+      }
+      
+      // Apply font family
+      const fontFamily = config.font_family || defaultConfig.font_family;
+      document.body.style.fontFamily = `${fontFamily}, Space Grotesk, sans-serif`;
+      
+      // Apply font size scaling
+      const baseSize = config.font_size || defaultConfig.font_size;
+      if (mainTitle) {
+        mainTitle.style.fontSize = `${baseSize * 3}px`;
+      }
+      if (subtitle) {
+        subtitle.style.fontSize = `${baseSize * 1.125}px`;
+      }
+    }
+
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [
+          {
+            get: () => config.primary_color || defaultConfig.primary_color,
+            set: (value) => {
+              config.primary_color = value;
+              window.elementSdk.setConfig({ primary_color: value });
+            }
+          },
+          {
+            get: () => config.secondary_color || defaultConfig.secondary_color,
+            set: (value) => {
+              config.secondary_color = value;
+              window.elementSdk.setConfig({ secondary_color: value });
+            }
+          },
+          {
+            get: () => config.text_color || defaultConfig.text_color,
+            set: (value) => {
+              config.text_color = value;
+              window.elementSdk.setConfig({ text_color: value });
+            }
+          },
+          {
+            get: () => config.accent_color || defaultConfig.accent_color,
+            set: (value) => {
+              config.accent_color = value;
+              window.elementSdk.setConfig({ accent_color: value });
+            }
+          },
+          {
+            get: () => config.highlight_color || defaultConfig.highlight_color,
+            set: (value) => {
+              config.highlight_color = value;
+              window.elementSdk.setConfig({ highlight_color: value });
+            }
+          }
+        ],
+        borderables: [],
+        fontEditable: {
+          get: () => config.font_family || defaultConfig.font_family,
+          set: (value) => {
+            config.font_family = value;
+            window.elementSdk.setConfig({ font_family: value });
+          }
+        },
+        fontSizeable: {
+          get: () => config.font_size || defaultConfig.font_size,
+          set: (value) => {
+            config.font_size = value;
+            window.elementSdk.setConfig({ font_size: value });
+          }
+        }
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      return new Map([
+        ['main_title', config.main_title || defaultConfig.main_title],
+        ['subtitle', config.subtitle || defaultConfig.subtitle]
+      ]);
+    }
+
+    // Initialize SDK
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+    }
+
+    // Auto-show first layer after a brief delay
+    setTimeout(() => showLayer(7), 500);
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9d0373185121f00e',t:'MTc3MTQ3OTgzNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
