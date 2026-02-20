@@ -39,6 +39,8 @@ body{background:var(--void);font-family:'IBM Plex Sans',sans-serif;color:var(--t
 .b-reset:hover{color:var(--text);border-color:var(--text)}
 .b-nav{color:var(--green);border-color:var(--green)}
 .b-nav:hover{background:var(--green);color:var(--void);box-shadow:0 0 20px var(--green)}
+.b-toggle{color:var(--blue);border-color:var(--blue)}
+.b-toggle:hover{background:var(--blue);color:var(--void);box-shadow:0 0 20px var(--blue)}
 .btn:disabled{opacity:.28;cursor:not-allowed}
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--b2);background:var(--deep)}
 .tab{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;padding:10px 20px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;border-right:1px solid var(--b1)}
@@ -74,6 +76,13 @@ body{background:var(--void);font-family:'IBM Plex Sans',sans-serif;color:var(--t
 .lrole{font-size:8px;color:var(--dim);margin-top:2px;font-family:'JetBrains Mono',monospace;letter-spacing:.2px;line-height:1.2}
 .lpdu{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;padding:3px 7px;border:1px solid;letter-spacing:.8px;text-transform:uppercase;opacity:.3;transition:opacity .25s;flex-shrink:0;clip-path:polygon(3px 0,100% 0,calc(100% - 3px) 100%,0 100%);margin-left:auto}
 .lyr.active .lpdu{opacity:1}
+@keyframes slideInUp{from{opacity:0;transform:translateY(20px) rotateX(45deg)}to{opacity:1;transform:translateY(0) rotateX(0)}}
+@keyframes slideInDown{from{opacity:0;transform:translateY(-20px) rotateX(-45deg)}to{opacity:1;transform:translateY(0) rotateX(0)}}
+.lyr.anim-enter{animation:slideInUp .5s ease-out forwards}
+.lyr.anim-enter-rev{animation:slideInDown .5s ease-out forwards}
+.mode-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:1.5px;padding:2px 6px;border-radius:2px;font-weight:700;text-transform:uppercase;margin-left:8px;border:1px solid}
+.mode-send{color:var(--green);border-color:var(--green);background:rgba(61,255,154,.1)}
+.mode-recv{color:var(--amber);border-color:var(--amber);background:rgba(255,170,0,.1)}
 .right{border-left:1px solid var(--b2);display:flex;flex-direction:column;overflow-y:auto;max-height:calc(100vh - 110px)}
 .right::-webkit-scrollbar{width:3px}.right::-webkit-scrollbar-thumb{background:var(--b2)}
 .panel{border-bottom:1px solid var(--b1);padding:16px 18px;margin-bottom:0}
@@ -147,6 +156,7 @@ body{background:var(--void);font-family:'IBM Plex Sans',sans-serif;color:var(--t
     </div>
   </div>
   <div class="hdr-right">
+    <button class="btn b-toggle" id="btn-toggle">⇅ DIRECTION</button>
     <button class="btn b-quiz" id="btn-quiz">QUIZ</button>
     <button class="btn b-reset" id="btn-reset">RESET</button>
   </div>
@@ -362,10 +372,26 @@ const QUIZ_QUESTIONS = [
   }draw();
 })();
 
+let reverseLayerOrder=false;
+
 function buildLayers(){
   const list=document.getElementById('layer-list');
+  const oldNavDiv=list.parentElement.querySelector('div[style*="border-top"]');
+  if(oldNavDiv)oldNavDiv.remove();
+  
+  const header=document.querySelector('.mc-hdr');
+  let modeBadge=header.querySelector('.mode-badge');
+  if(!modeBadge){
+    modeBadge=document.createElement('span');
+    modeBadge.className='mode-badge';
+    header.appendChild(modeBadge);
+  }
+  modeBadge.className='mode-badge '+(reverseLayerOrder?'mode-recv':'mode-send');
+  modeBadge.textContent=reverseLayerOrder?'RECEIVING':'SENDING';
+  
   list.innerHTML='';
-  LAYERS.forEach((l,idx)=>{
+  const layersToDisplay=reverseLayerOrder?[...LAYERS].reverse():LAYERS;
+  layersToDisplay.forEach((l,idx)=>{
     const lyr=document.createElement('div');
     lyr.className='lyr';
     lyr.dataset.n=l.n;
@@ -378,6 +404,8 @@ function buildLayers(){
       <div class="lpdu">${l.icon}</div>
     `;
     lyr.style.setProperty('--color',l.color);
+    lyr.className='lyr '+(!reverseLayerOrder?'anim-enter':'anim-enter-rev');
+    lyr.style.animationDelay=`${idx*50}ms`;
     lyr.addEventListener('click',()=>showDetail(l));
     list.appendChild(lyr);
   });
@@ -624,6 +652,13 @@ function showResult(){
     </div>
   `;
 }
+
+document.getElementById('btn-toggle').addEventListener('click',()=>{
+  reverseLayerOrder=!reverseLayerOrder;
+  buildLayers();
+  const toggleBtn=document.getElementById('btn-toggle');
+  toggleBtn.textContent=reverseLayerOrder?'⇆ DIRECTION':'⇅ DIRECTION';
+});
 
 document.getElementById('btn-quiz').addEventListener('click',startQuiz);
 document.getElementById('btn-reset').addEventListener('click',()=>{
