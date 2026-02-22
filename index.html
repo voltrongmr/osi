@@ -78,6 +78,7 @@ body{background:var(--void);font-family:'IBM Plex Sans',sans-serif;color:var(--t
 .lrole{font-size:8px;color:var(--dim);margin-top:2px;font-family:'JetBrains Mono',monospace;letter-spacing:.2px;line-height:1.2}
 .lpdu{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;padding:3px 7px;border:1px solid;letter-spacing:.8px;text-transform:uppercase;opacity:.3;transition:opacity .25s;flex-shrink:0;clip-path:polygon(3px 0,100% 0,calc(100% - 3px) 100%,0 100%);margin-left:auto}
 .lyr.active .lpdu{opacity:1}
+.lyr.active .lrole{color:var(--cyan)}
 @keyframes slideInUp{from{opacity:0;transform:translateY(20px) rotateX(45deg)}to{opacity:1;transform:translateY(0) rotateX(0)}}
 @keyframes slideInDown{from{opacity:0;transform:translateY(-20px) rotateX(-45deg)}to{opacity:1;transform:translateY(0) rotateX(0)}}
 .lyr.anim-enter{animation:slideInUp .5s ease-out forwards}
@@ -136,6 +137,39 @@ body{background:var(--void);font-family:'IBM Plex Sans',sans-serif;color:var(--t
 .tab-content{display:none}
 .tab-content.active{display:block}
 @media(max-width:860px){.body{grid-template-columns:1fr}.right{border-left:none;border-top:1px solid var(--b2);max-height:none}}
+.topo-node circle{transition:all .2s}
+.topo-node:hover circle:first-child{filter:brightness(1.4);r:22}
+#topology-viz svg{filter:drop-shadow(0 0 20px rgba(0,229,255,.08))}
+.topo-node.failed circle:first-child{stroke:#ff3333!important;fill:rgba(255,30,30,.25)!important;}
+.topo-node.failed circle:nth-child(2){fill:rgba(255,30,30,.35)!important;}
+.topo-node.failed text{fill:#ff5555!important;}
+.topo-node.degraded circle:first-child{stroke:#ffaa00!important;}
+.topo-node.degraded circle:nth-child(2){fill:rgba(255,170,0,.2)!important;}
+.topo-node.degraded text{fill:#ffcc44!important;}
+@keyframes nodeFailPulse{0%{r:22}50%{r:26}100%{r:22}}
+.topo-node.failed circle:first-child{animation:nodeFailPulse .5s ease-out 2;}
+#failure-log{font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--dim);max-height:160px;overflow-y:auto;padding:8px;background:rgba(0,0,0,.2);border-radius:3px;border:1px solid var(--b2);}
+#failure-log::-webkit-scrollbar{width:4px;}
+#failure-log::-webkit-scrollbar-track{background:rgba(0,0,0,.3);border-radius:2px;}
+#failure-log::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--cyan),var(--green));border-radius:2px;transition:background .2s;}
+#failure-log::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,var(--green),var(--cyan));}
+.fail-entry-fail{color:#ff5555;}
+.fail-entry-warn{color:#ffaa00;}
+.fail-entry-ok{color:var(--green);}
+.fail-entry-info{color:var(--cyan);}
+#topology-cards [data-topo]:hover{background:rgba(255,255,255,.04)!important;transform:translateX(3px)}
+#topology-cards [data-topo]{transition:all .18s}
+#topology-select:hover{border-color:var(--cyan)!important;}
+#topology-select option{background:var(--deep);color:var(--text);}
+@keyframes encap-in{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+#packet-layers>div{animation:encap-in .3s ease-out forwards}
+#packet-layers>div:nth-child(1){animation-delay:0ms}
+#packet-layers>div:nth-child(2){animation-delay:80ms}
+#packet-layers>div:nth-child(3){animation-delay:160ms}
+#packet-layers>div:nth-child(4){animation-delay:240ms}
+#packet-layers>div:nth-child(5){animation-delay:320ms}
+#packet-layers>div:nth-child(6){animation-delay:400ms}
+#packet-layers>div:nth-child(7){animation-delay:480ms}
 </style>
  </head>
  <body>
@@ -166,16 +200,97 @@ body{background:var(--void);font-family:'IBM Plex Sans',sans-serif;color:var(--t
 
 <div class="tabs" id="tabs">
   <div class="tab active" data-tab="explore">Explore</div>
-  <div class="tab" data-tab="reference">Reference</div>
-  <div class="tab" data-tab="comparison">OSI vs TCP/IP</div>
+  <div class="tab" data-tab="topologies">Topologies</div>
+  <div class="tab" data-tab="network-visualizer">Network Visualizer</div>
 </div>
 
 <div class="body">
   <div class="left-col" id="left-col" style="border-right:1px solid var(--b1);">
-    <div class="panel" style="border:none;padding:16px 24px;margin:0;">
-      <div class="ptitle" style="margin-bottom:12px;">Layer Details</div>
-      <div id="det-empty" class="det-empty">Select a layer to explore</div>
-      <div id="det-wrap" class="det-wrap"></div>
+    <div id="explore-content" class="tab-content active">
+      <div class="panel" style="border:none;padding:16px 24px;margin:0;">
+        <div class="ptitle" style="margin-bottom:12px;">Layer Details</div>
+        <div id="det-empty" class="det-empty">Select a layer to explore</div>
+        <div id="det-wrap" class="det-wrap"></div>
+      </div>
+    </div>
+    
+    <div id="topologies-content" class="tab-content">
+      <div style="padding:16px 24px;">
+        <div class="ptitle" style="margin-bottom:16px;">Network Topology Diagram</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--dim);margin-bottom:8px;letter-spacing:1px;">&#9888; CLICK A NODE TO SIMULATE FAILURE &nbsp;|&nbsp; CLICK AGAIN TO RESTORE</div>
+        <div id="topology-viz" style="min-height:320px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.15);border:1px solid var(--b2);border-radius:6px;position:relative;overflow:hidden;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);text-align:center;">
+            <div style="font-size:24px;margin-bottom:8px;opacity:.3;">◈</div>
+            Select a topology from the sidebar
+          </div>
+        </div>
+        <div id="topology-stats" style="display:none;margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
+      </div>
+    </div>
+    
+    <div id="network-visualizer-content" class="tab-content">
+      <div style="padding:16px 24px;">
+        <div class="ptitle" style="margin-bottom:16px;">Packet Encapsulation Visual</div>
+        <!-- Host diagram -->
+        <div id="nv-host-diagram" style="background:rgba(0,0,0,.2);border:1px solid var(--b2);border-radius:6px;padding:16px 20px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:0;position:relative;">
+            <!-- Sender -->
+            <div id="nv-sender" style="flex-shrink:0;text-align:center;width:80px;">
+              <div style="width:52px;height:52px;border:2px solid var(--cyan);border-radius:6px;background:rgba(0,229,255,.07);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:22px;position:relative;" id="nv-sender-box">💻
+                <div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:var(--green);" id="nv-sender-led"></div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--cyan);margin-top:10px;letter-spacing:1px;">SENDER</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:6px;color:var(--dim);margin-top:2px;">192.168.1.100</div>
+            </div>
+            <!-- Channel -->
+            <div style="flex:1;position:relative;height:52px;display:flex;align-items:center;">
+              <div style="position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan)22,var(--cyan)88,var(--cyan)22);"></div>
+              <div id="nv-packet-travel" style="position:absolute;left:0;width:28px;height:18px;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:3px;display:none;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:6px;color:#000;font-weight:700;transition:left 1.2s cubic-bezier(.4,0,.2,1);">PKT</div>
+              <!-- OSI layer badges along the wire -->
+              <div id="nv-wire-labels" style="position:absolute;left:0;right:0;display:flex;justify-content:space-around;top:-18px;">
+              </div>
+            </div>
+            <!-- Receiver -->
+            <div id="nv-receiver" style="flex-shrink:0;text-align:center;width:80px;">
+              <div style="width:52px;height:52px;border:2px solid var(--green);border-radius:6px;background:rgba(61,255,154,.07);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:22px;position:relative;" id="nv-receiver-box">🖥️
+                <div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:var(--dim);" id="nv-receiver-led"></div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--green);margin-top:10px;letter-spacing:1px;">RECEIVER</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:6px;color:var(--dim);margin-top:2px;">93.184.216.34</div>
+            </div>
+          </div>
+          <!-- Status bar -->
+          <div id="nv-status" style="margin-top:14px;padding:6px 10px;background:rgba(0,0,0,.3);border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);text-align:center;border:1px solid var(--b1);">
+            Ready — click SEND to begin
+          </div>
+        </div>
+
+        <!-- Active layer highlight -->
+        <div id="nv-active-layer" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:4px;border:1px solid;position:relative;overflow:hidden;transition:all .3s;">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:3px;" id="nv-al-bar"></div>
+          <div style="padding-left:10px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span id="nv-al-icon" style="font-size:18px;"></span>
+              <div>
+                <div id="nv-al-name" style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;"></div>
+                <div id="nv-al-unit" style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--dim);"></div>
+              </div>
+              <div id="nv-al-badge" style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:7px;padding:2px 7px;border:1px solid;border-radius:2px;"></div>
+            </div>
+            <div id="nv-al-header" style="font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--text);opacity:.85;line-height:1.6;padding:6px 8px;background:rgba(0,0,0,.25);border-radius:2px;margin-top:4px;"></div>
+          </div>
+        </div>
+
+        <!-- Packet builder visual -->
+        <div id="packet-processing-viz" style="background:rgba(0,0,0,.15);border:1px solid var(--b2);border-radius:6px;padding:12px;min-height:80px;">
+          <div id="nv-packet-builder" style="display:flex;flex-direction:column;gap:0;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-align:center;padding:30px 0;opacity:.4;">
+              <div style="font-size:24px;margin-bottom:8px;">⬡</div>
+              Packet will build here as layers are added
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -193,15 +308,73 @@ body{background:var(--void);font-family:'IBM Plex Sans',sans-serif;color:var(--t
       </div>
     </div>
 
-    <div id="reference-tab" class="tab-content" style="padding:12px;">
-      <div id="ref-content"></div>
+    <div id="topologies-tab" class="tab-content">
+      <div style="padding:12px;">
+        <div class="mc-hdr" style="font-size:8px;padding:8px;margin-bottom:10px;">Select Topology</div>
+        <div id="topology-cards" style="display:none;"></div>
+        <div style="position:relative;">
+          <select id="topology-select" style="width:100%;padding:9px 32px 9px 12px;background:var(--deep);border:1px solid var(--b2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;appearance:none;-webkit-appearance:none;cursor:pointer;border-radius:3px;outline:none;transition:border-color .18s;">
+            <option value="">— CHOOSE TOPOLOGY —</option>
+          </select>
+          <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--cyan);font-size:10px;">▾</span>
+        </div>
+      </div>
+
+      <div class="panel" style="border-top:1px solid var(--b1);padding:12px;margin-top:4px;">
+        <div class="ptitle" style="margin-bottom:10px;font-size:8px;">Info</div>
+        <div id="topology-content" style="font-size:11px;color:var(--dim);text-align:center;padding:12px 0;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;">Select a topology above</span>
+        </div>
+      </div>
+      
+      <div class="panel" style="border-top:1px solid var(--b1);padding:12px;margin-top:4px;">
+        <div class="ptitle" style="margin-bottom:10px;font-size:8px;">Failure Simulator</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--dim);margin-bottom:8px;line-height:1.6;">Click any node in the diagram to simulate a failure and see how the topology is affected.</div>
+        <button id="reset-failures" class="btn b-reset" style="width:calc(100% - 20px);margin:0 10px 10px;font-size:8px;padding:8px;">&#8635; RESET NODES</button>
+        <div id="failure-log">
+          <div style="color:var(--dim);text-align:center;padding:12px 0;">Click a node to simulate failure</div>
+        </div>
+      </div>
     </div>
 
-    <div id="comparison-tab" class="tab-content" style="padding:12px;">
-      <div id="comp-content"></div>
+    <div id="network-visualizer-tab" class="tab-content">
+      <div style="padding:12px;">
+        <div class="mc-hdr" style="font-size:8px;padding:8px;margin-bottom:10px;">Message</div>
+        <div style="background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.15);padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--cyan);margin-bottom:10px;border-radius:2px;">
+          <div style="color:var(--dim);font-size:7px;margin-bottom:4px;">PAYLOAD</div>
+          <input id="nv-payload" value="Hello, World!" style="background:transparent;border:none;outline:none;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:8px;width:100%;"/>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button id="process-packet" class="btn b-go" style="flex:1;font-size:8px;padding:8px;">&#9654; SEND</button>
+          <button id="nv-step-btn" class="btn b-toggle" style="flex:1;font-size:8px;padding:8px;">&#9654;&#9474; STEP</button>
+          <button id="nv-reset-btn" class="btn b-reset" style="flex:1;font-size:8px;padding:8px;">&#8635; RESET</button>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--dim);letter-spacing:1px;">SPEED</span>
+            <span id="nv-speed-label" style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--cyan);">NORMAL</span>
+          </div>
+          <input id="nv-speed" type="range" min="1" max="5" value="3" style="width:100%;accent-color:var(--cyan);cursor:pointer;height:3px;"/>
+          <div style="display:flex;justify-content:space-between;margin-top:3px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:6px;color:var(--dim);">SLOW</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:6px;color:var(--dim);">FAST</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:0 12px 4px;">
+        <div class="mc-hdr" style="font-size:8px;padding:8px;margin-bottom:8px;">Layer Stack</div>
+        <div id="nv-progress" style="display:flex;gap:2px;margin-bottom:8px;padding:0 2px;">
+          <!-- 7 progress dots injected by JS -->
+        </div>
+        <div id="packet-layers" style="display:flex;flex-direction:column;gap:2px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-align:center;padding:20px 0;">Click Encapsulate to build the packet</div>
+        </div>
+      </div>
+
     </div>
 
-    <div class="panel" style="border-top:1px solid var(--b1);padding:10px 14px;">
+    <div class="panel" id="mnemonic-panel" style="border-top:1px solid var(--b1);padding:10px 14px;">
       <div class="ptitle" style="margin-bottom:8px;font-size:8px;">Mnemonic</div>
       <p style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--green);line-height:1.5;margin:0;">
         <strong style="color:var(--cyan);">Send:</strong> APSTNDP<br>
@@ -374,7 +547,8 @@ const QUIZ_QUESTIONS = [
   }draw();
 })();
 
-let reverseLayerOrder=false;
+let reverseLayerOrder=true;
+let currentLayerNum=7;
 
 function buildLayers(){
   const list=document.getElementById('layer-list');
@@ -435,6 +609,14 @@ function buildLayers(){
       list.children[curIdx].scrollIntoView({behavior:'smooth',block:'nearest'});
     }
   });
+  
+  // Auto-select Application Layer on initial load
+  if(!window.layerSelected) {
+    window.layerSelected = true;
+    setTimeout(() => {
+      showDetail(LAYERS[6]); // Application Layer
+    }, 50);
+  }
 }
 
 function showPacket(layerNum,color){
@@ -478,9 +660,18 @@ function showPacket(layerNum,color){
 }
 
 function showDetail(l){
-  document.getElementById('det-empty').style.display='none';
+  console.log('showDetail called for layer:', l.name);
+  currentLayerNum=l.n;
+  const detEmpty = document.getElementById('det-empty');
   const dw=document.getElementById('det-wrap');
-  dw.classList.add('show');
+  
+  if(detEmpty) detEmpty.style.display='none';
+  if(dw) {
+    dw.classList.add('show');
+    console.log('det-wrap element found and show class added');
+  } else {
+    console.log('det-wrap element not found!');
+  }
   
   const colorVar=l.color;
   dw.innerHTML=`
@@ -522,7 +713,14 @@ function showDetail(l){
   `;
   
   document.querySelectorAll('.lyr').forEach(e=>e.classList.remove('active'));
-  document.querySelector(`[data-n="${l.n}"]`).classList.add('active');
+  const layerElement = document.querySelector(`[data-n="${l.n}"]`);
+  console.log('Looking for layer element with data-n:', l.n);
+  if(layerElement) {
+    layerElement.classList.add('active');
+    console.log('Layer element found and activated');
+  } else {
+    console.log('Layer element not found!');
+  }
   showPacket(l.n,l.color);
 }
 
@@ -582,9 +780,1006 @@ function switchTab(name){
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
   document.querySelector(`[data-tab="${name}"]`).classList.add('active');
   document.getElementById(`${name}-tab`).classList.add('active');
+  
+  const leftCol=document.getElementById('left-col');
+  const mnemonicPanel=document.getElementById('mnemonic-panel');
+  
+  if(name==='explore'){
+    leftCol.style.display='block';
+    mnemonicPanel.style.display='block';
+    document.getElementById('explore-content').classList.add('active');
+    document.getElementById('topologies-content').classList.remove('active');
+    document.getElementById('network-visualizer-content').classList.remove('active');
+  }else if(name==='topologies'){
+    leftCol.style.display='block';
+    mnemonicPanel.style.display='none';
+    document.getElementById('explore-content').classList.remove('active');
+    document.getElementById('topologies-content').classList.add('active');
+    document.getElementById('network-visualizer-content').classList.remove('active');
+    initTopologySelector();
+  }else if(name==='network-visualizer'){
+    leftCol.style.display='block';
+    mnemonicPanel.style.display='none';
+    document.getElementById('explore-content').classList.remove('active');
+    document.getElementById('topologies-content').classList.remove('active');
+    document.getElementById('network-visualizer-content').classList.add('active');
+    initPacketProcessor();
+  }else{
+    leftCol.style.display='none';
+    mnemonicPanel.style.display='none';
+  }
+  
   if(name==='reference')buildReference();
   if(name==='comparison')buildComparison();
 }
+
+const TOPOLOGIES_META = {
+  mesh:   {label:'Mesh',     color:'var(--cyan)',  icon:'⬡', nodes:6, connections:15, fault:'High', cost:'High',    speed:'High',   desc:'Every device connects directly to every other device. Maximum redundancy and fault tolerance.'},
+  star:   {label:'Star',     color:'var(--green)', icon:'✦', nodes:5, connections:4,  fault:'Med', cost:'Med',     speed:'High',   desc:'All devices connect to a central hub or switch. Easy to add/remove nodes and isolate faults.'},
+  bus:    {label:'Bus',      color:'var(--amber)', icon:'⊟', nodes:6, connections:5,  fault:'Low', cost:'Low',     speed:'Med',    desc:'Devices share a single communication line. Simple but a single failure can halt the network.'},
+  ring:   {label:'Ring',     color:'var(--pink)',  icon:'◯', nodes:4, connections:4,  fault:'Low', cost:'Low',     speed:'Med',    desc:'Devices are connected in a closed loop. Token passing controls data flow around the ring.'},
+  tree:   {label:'Tree',     color:'var(--blue)',  icon:'⊤', nodes:7, connections:6,  fault:'Med', cost:'Med',     speed:'High',   desc:'Hierarchical structure with root, branches, and leaves. Used in large enterprise networks.'},
+  hybrid: {label:'Hybrid',   color:'var(--l6)',    icon:'⬟', nodes:8, connections:8,  fault:'High',cost:'High',   speed:'High',   desc:'Combines multiple topology types to meet specific network requirements and optimize performance.'}
+};
+
+function initTopologySelector(){
+  const sel=document.getElementById('topology-select');
+  if(!sel) return;
+  // Clear existing options except placeholder
+  while(sel.options.length>1) sel.remove(1);
+  Object.entries(TOPOLOGIES_META).forEach(([key,meta])=>{
+    const opt=document.createElement('option');
+    opt.value=key;
+    opt.textContent=`${meta.icon}  ${meta.label.toUpperCase()}  ·  ${meta.nodes} nodes`;
+    sel.appendChild(opt);
+  });
+  if(!sel._bound){
+    sel._bound=true;
+    sel.addEventListener('change',()=>{
+      const key=sel.value;
+      if(!key) return;
+      // Update border color to match topology
+      const meta=TOPOLOGIES_META[key];
+      sel.style.borderColor=meta?meta.color:'var(--b2)';
+      displayTopology(key);
+    });
+    sel.addEventListener('focus',()=>{ sel.style.borderColor='var(--cyan)'; });
+    sel.addEventListener('blur',()=>{
+      const key=sel.value;
+      const meta=key?TOPOLOGIES_META[key]:null;
+      sel.style.borderColor=meta?meta.color:'var(--b2)';
+    });
+  }
+  // Auto-select star topology on first load
+  if(!window.topologyInitialized){
+    window.topologyInitialized=true;
+    sel.value='star';
+    sel.dispatchEvent(new Event('change'));
+  }
+}
+
+// ════════════════ NETWORK VISUALIZER ════════════════
+const NV_LAYERS = [
+  {n:7, name:'Application',  color:'#ff3ea5', abbr:'L7', icon:'⚙', unit:'Data',    header:(p)=>`HTTP GET /index.html HTTP/1.1\nHost: example.com\nPayload: "${p}"`,        action:'App data created'},
+  {n:6, name:'Presentation', color:'#bf4dff', abbr:'L6', icon:'🔐', unit:'Data',    header:()=>`Content-Type: text/html\n[TLS 1.3 Encrypted]\nCipher: AES-256-GCM`,       action:'Encrypted & encoded'},
+  {n:5, name:'Session',      color:'#4d7fff', abbr:'L5', icon:'🔁', unit:'Data',    header:()=>`Session-ID: 0x7F3A2C9B\nSeq: 1  Dialog: Full-Duplex`,                      action:'Session opened'},
+  {n:4, name:'Transport',    color:'#00e5ff', abbr:'L4', icon:'📦', unit:'Segment', header:()=>`TCP  SRC:52341 → DST:443\nSEQ:1001  ACK:0  Flags:SYN`,                    action:'Segment formed'},
+  {n:3, name:'Network',      color:'#3dff9a', abbr:'L3', icon:'🗺', unit:'Packet',  header:()=>`IPv4  192.168.1.100 → 93.184.216.34\nTTL:64  Proto:TCP  Checksum:0x3A1F`, action:'Packet routed'},
+  {n:2, name:'Data Link',    color:'#aaff33', abbr:'L2', icon:'🔗', unit:'Frame',   header:()=>`ETH  AA:BB:CC:DD:EE:FF → 00:1A:2B:3C:4D:5E\nType:IPv4  FCS:0xC3A21F44`, action:'Frame assembled'},
+  {n:1, name:'Physical',     color:'#ffaa00', abbr:'L1', icon:'⚡', unit:'Bits',    header:()=>`01001000 01100101 01101100 01101100\n01101111 00101100 00100000 ...`,       action:'Bits on wire'},
+];
+
+let nvState = { step: -1, mode: 'encap', running: false };
+
+function nvReset() {
+  nvState = { step: -1, mode: 'encap', running: false };
+  nvStepPos = -1;
+  const layersDiv = document.getElementById('packet-layers');
+  const finalDiv  = document.getElementById('final-packet');
+  const builder   = document.getElementById('nv-packet-builder');
+  const active    = document.getElementById('nv-active-layer');
+  const status    = document.getElementById('nv-status');
+  const progress  = document.getElementById('nv-progress');
+  const travel    = document.getElementById('nv-packet-travel');
+  if(layersDiv) layersDiv.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--dim);text-align:center;padding:20px 0;">Click Encapsulate to build the packet</div>';
+  if(finalDiv)  finalDiv.innerHTML='<span style="font-size:9px;text-align:center;display:block;padding:10px 0;opacity:.4;">Bit stream will appear here</span>';
+  if(builder)   builder.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--dim);text-align:center;padding:30px 0;opacity:.4;"><div style="font-size:24px;margin-bottom:8px;">⬡</div>Packet will build here as layers are added</div>';
+  if(active)    active.style.display='none';
+  if(status)    status.innerHTML='Ready — click SEND to begin';
+  if(status)    status.style.color='var(--dim)';
+  if(travel)    travel.style.display='none';
+  const recvLed = document.getElementById('nv-receiver-led');
+  const sendLed = document.getElementById('nv-sender-led');
+  const recvBox = document.getElementById('nv-receiver-box');
+  if(recvLed) { recvLed.style.background='var(--dim)'; recvLed.style.boxShadow='none'; }
+  if(sendLed) sendLed.style.background='var(--green)';
+  if(recvBox) { recvBox.style.borderColor='var(--green)'; recvBox.style.background='rgba(61,255,154,.07)'; }
+  nvBuildProgress(-1);
+}
+
+function nvBuildProgress(activeStep) {
+  const prog = document.getElementById('nv-progress');
+  if(!prog) return;
+  prog.innerHTML = '';
+  NV_LAYERS.forEach((l, i) => {
+    const done = i <= activeStep;
+    const cur  = i === activeStep;
+    const dot = document.createElement('div');
+    dot.style.cssText = `flex:1;height:4px;border-radius:2px;transition:all .3s;background:${done ? l.color : 'var(--b2)'};${cur ? `box-shadow:0 0 6px ${l.color};` : ''}`;
+    prog.appendChild(dot);
+  });
+}
+
+function nvShowActiveLayer(idx, mode) {
+  const layer  = NV_LAYERS[idx];
+  const active = document.getElementById('nv-active-layer');
+  const payload= document.getElementById('nv-payload')?.value || 'Hello, World!';
+  if(!active || !layer) return;
+  active.style.display = 'block';
+  active.style.borderColor = layer.color + '66';
+  active.style.background  = layer.color + '08';
+  document.getElementById('nv-al-bar').style.background  = layer.color;
+  document.getElementById('nv-al-bar').style.boxShadow   = `0 0 8px ${layer.color}`;
+  document.getElementById('nv-al-icon').textContent = layer.icon;
+  document.getElementById('nv-al-name').textContent = `L${layer.n} — ${layer.name}`;
+  document.getElementById('nv-al-name').style.color = layer.color;
+  document.getElementById('nv-al-unit').textContent = `PDU: ${layer.unit}`;
+  document.getElementById('nv-al-badge').textContent = mode === 'encap' ? '+HDR' : '−HDR';
+  document.getElementById('nv-al-badge').style.color       = layer.color;
+  document.getElementById('nv-al-badge').style.borderColor = layer.color + '66';
+  document.getElementById('nv-al-header').textContent = layer.header(payload);
+}
+
+function nvAddSidebarEntry(idx, mode='encap') {
+  const layer    = NV_LAYERS[idx];
+  const layersDiv= document.getElementById('packet-layers');
+  const payload  = document.getElementById('nv-payload')?.value || 'Hello, World!';
+  if(idx === 0 && mode==='encap') layersDiv.innerHTML = '';
+  const el = document.createElement('div');
+  el.style.cssText = `padding:6px 9px;border-left:3px solid ${layer.color};background:rgba(0,0,0,.2);border-radius:0 3px 3px 0;opacity:0;transform:translateX(${mode==='encap'?'-':''}8px);transition:all .3s;margin-bottom:2px;`;
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;color:${layer.color};">${layer.icon} ${layer.abbr} ${layer.name}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:6px;color:var(--dim);padding:1px 5px;border:1px solid ${layer.color}44;">${mode==='encap'?layer.unit:'−HDR'}</span>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:6.5px;color:var(--text);opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${layer.header(payload).split('\n')[0]}</div>
+  `;
+  layersDiv.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateX(0)'; });
+}
+
+function nvUpdatePacketBuilder(upToIdx) {
+  const builder = document.getElementById('nv-packet-builder');
+  const payload = document.getElementById('nv-payload')?.value || 'Hello, World!';
+  if(!builder) return;
+  builder.innerHTML = '';
+  for(let i = upToIdx; i >= 0; i--) {
+    const l = NV_LAYERS[i];
+    const isOuter = i === upToIdx;
+    const indent = (upToIdx - i) * 8;
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = `position:relative;transition:all .3s;margin:0 ${indent}px 0 0;`;
+    wrapper.innerHTML = `
+      <div style="padding:${isOuter?'8px 12px':'5px 12px'};border:1px solid ${l.color}${isOuter?'88':'33'};background:linear-gradient(90deg,${l.color}${isOuter?'18':'07'},transparent);position:relative;border-radius:${i===upToIdx?'3px 3px 0 0':'0'};">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:${isOuter?'3':'2'}px;background:${l.color};opacity:${isOuter?'1':'.4'};"></div>
+        <div style="padding-left:10px;display:flex;align-items:center;gap:8px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:${isOuter?'9':'7.5'}px;font-weight:700;color:${l.color};opacity:${isOuter?'1':'.55'};">${l.abbr}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:${isOuter?'8':'7'}px;color:${l.color};opacity:${isOuter?'.9':'.4'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.header(payload).split('\n')[0]}</span>
+          ${isOuter ? `<span style="font-family:'JetBrains Mono',monospace;font-size:6px;padding:1px 5px;border:1px solid ${l.color}66;color:${l.color};flex-shrink:0;">+HDR</span>` : ''}
+        </div>
+      </div>
+    `;
+    builder.appendChild(wrapper);
+  }
+  const pay = document.createElement('div');
+  pay.style.cssText = `padding:8px 12px;border:1px dashed var(--dim);border-top:none;background:rgba(255,255,255,.025);margin-right:${upToIdx*8}px;border-radius:0 0 3px 3px;`;
+  pay.innerHTML = `<span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--bright);opacity:.7;">PAYLOAD: "${payload}"</span>`;
+  builder.appendChild(pay);
+}
+
+function nvAnimateTransmit(cb) {
+  const travel = document.getElementById('nv-packet-travel');
+  const channel = travel?.parentElement;
+  if(!travel || !channel) { cb && cb(); return; }
+  const w = channel.offsetWidth - 28;
+  travel.style.display = 'flex';
+  travel.style.left = '0px';
+  travel.style.opacity = '1';
+  document.getElementById('nv-receiver-led').style.background = 'var(--dim)';
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      travel.style.left = w + 'px';
+      setTimeout(() => {
+        travel.style.opacity = '0';
+        const rl = document.getElementById('nv-receiver-led');
+        if(rl) { rl.style.background='var(--green)'; rl.style.boxShadow='0 0 8px var(--green)'; }
+        setTimeout(() => { travel.style.display = 'none'; cb && cb(); }, 300);
+      }, 1300);
+    }, 30);
+  });
+}
+
+function nvSetStatus(msg, color='var(--cyan)') {
+  const s = document.getElementById('nv-status');
+  if(s) { s.innerHTML = msg; s.style.color = color; }
+}
+
+// Step state tracks position across encap + transmit + decap
+// steps 0-6: encap L7→L1, step 7: transmit, steps 8-14: decap L1→L7
+let nvStepPos = -1;
+
+function nvStep() {
+  if(nvState.running) return;
+  const payload = document.getElementById('nv-payload')?.value || 'Hello, World!';
+  nvStepPos++;
+
+  // First step — clear and init
+  if(nvStepPos === 0) {
+    document.getElementById('packet-layers').innerHTML = '';
+    document.getElementById('nv-packet-builder').innerHTML = '';
+    nvBuildProgress(-1);
+    document.getElementById('nv-receiver-led').style.background = 'var(--dim)';
+    document.getElementById('nv-sender-led').style.background = 'var(--green)';
+    const rb = document.getElementById('nv-receiver-box');
+    if(rb) { rb.style.borderColor='var(--green)'; rb.style.background='rgba(61,255,154,.07)'; }
+  }
+
+  // Steps 0–6: encapsulate
+  if(nvStepPos <= 6) {
+    const layer = NV_LAYERS[nvStepPos];
+    nvState.step = nvStepPos;
+    nvBuildProgress(nvStepPos);
+    nvShowActiveLayer(nvStepPos, 'encap');
+    nvAddSidebarEntry(nvStepPos, 'encap');
+    nvUpdatePacketBuilder(nvStepPos);
+    nvSetStatus(`↓ Encap  L${layer.n} ${layer.name} — ${layer.action}`, layer.color);
+    return;
+  }
+
+  // Step 7: transmit
+  if(nvStepPos === 7) {
+    nvState.running = true;
+    nvSetStatus('⬡ Transmitting on wire...', 'var(--amber)');
+    nvAnimateTransmit(() => {
+      nvState.running = false;
+      const rb = document.getElementById('nv-receiver-box');
+      if(rb) { rb.style.borderColor='var(--cyan)'; rb.style.background='rgba(0,229,255,.1)'; }
+      document.getElementById('nv-sender-led').style.background = 'var(--dim)';
+      document.getElementById('packet-layers').innerHTML = '';
+      nvSetStatus('⬡ Packet arrived — click STEP to decapsulate', 'var(--cyan)');
+    });
+    return;
+  }
+
+  // Steps 8–14: decapsulate
+  if(nvStepPos <= 14) {
+    if(nvState.running) return;
+    const decapIdx = nvStepPos - 8; // 0=L1, 6=L7
+    const layerIdx = NV_LAYERS.length - 1 - decapIdx;
+    const layer = NV_LAYERS[layerIdx];
+    nvState.step = layerIdx;
+    nvBuildProgress(layerIdx);
+    nvShowActiveLayer(layerIdx, 'decap');
+    nvAddSidebarEntry(layerIdx, 'decap');
+    nvUpdatePacketBuilder(layerIdx);
+    nvSetStatus(`↑ Decap  L${layer.n} ${layer.name} — header stripped`, layer.color);
+
+    // Final decap step
+    if(nvStepPos === 14) {
+      setTimeout(() => {
+        const rb = document.getElementById('nv-receiver-box');
+        if(rb) { rb.style.borderColor='var(--green)'; rb.style.background='rgba(61,255,154,.07)'; }
+        nvSetStatus('✓ Data delivered to application!', 'var(--green)');
+        const builder = document.getElementById('nv-packet-builder');
+        if(builder) builder.innerHTML = `
+          <div style="padding:16px;border:2px solid var(--green);background:rgba(61,255,154,.06);border-radius:4px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--dim);margin-bottom:6px;letter-spacing:1px;">APPLICATION DATA RECEIVED</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--green);font-weight:700;">"${payload}"</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--dim);margin-top:8px;">✓ All headers stripped · Payload intact</div>
+          </div>
+        `;
+        nvStepPos = -1; // allow restart
+      }, 200);
+    }
+  }
+}
+
+function nvGetDelay() {
+  const val = parseInt(document.getElementById('nv-speed')?.value || 3);
+  // val 1=slowest, 5=fastest
+  const map = {1: 900, 2: 600, 3: 400, 4: 220, 5: 80};
+  return map[val] || 400;
+}
+
+function processPacket() {
+  if(nvState.running) return;
+  nvReset();
+  nvState.running = true;
+  const payload = document.getElementById('nv-payload')?.value || 'Hello, World!';
+  const ENCAP_DELAY = nvGetDelay();
+  const DECAP_DELAY = Math.round(ENCAP_DELAY * 0.85);
+
+  // ── Phase 1: Encapsulate (L7 → L1) ──
+  NV_LAYERS.forEach((layer, i) => {
+    setTimeout(() => {
+      nvState.step = i;
+      nvBuildProgress(i);
+      nvShowActiveLayer(i, 'encap');
+      nvAddSidebarEntry(i, 'encap');
+      nvUpdatePacketBuilder(i);
+      nvSetStatus(`↓ Encap  L${layer.n} ${layer.name} — ${layer.action}`, layer.color);
+    }, i * ENCAP_DELAY);
+  });
+
+  // ── Phase 2: Wire transmission ──
+  const afterEncap = NV_LAYERS.length * ENCAP_DELAY + 200;
+  setTimeout(() => {
+    nvSetStatus('⬡ Transmitting on wire...', 'var(--amber)');
+    nvAnimateTransmit(() => {
+      // ── Phase 3: Decapsulate (L1 → L7) at receiver ──
+      const recvBox = document.getElementById('nv-receiver-box');
+      if(recvBox) { recvBox.style.borderColor='var(--cyan)'; recvBox.style.background='rgba(0,229,255,.1)'; }
+      document.getElementById('nv-sender-led').style.background = 'var(--dim)';
+      document.getElementById('packet-layers').innerHTML = '';
+
+      const decapOrder = [...NV_LAYERS].reverse();
+      decapOrder.forEach((layer, i) => {
+        setTimeout(() => {
+          const idx = NV_LAYERS.length - 1 - i;
+          nvState.step = idx;
+          nvBuildProgress(idx);
+          nvShowActiveLayer(idx, 'decap');
+          nvAddSidebarEntry(idx, 'decap');
+          nvUpdatePacketBuilder(idx);
+          nvSetStatus(`↑ Decap  L${layer.n} ${layer.name} — header stripped`, layer.color);
+
+          if(i === decapOrder.length - 1) {
+            setTimeout(() => {
+              nvState.running = false;
+              if(recvBox) { recvBox.style.borderColor='var(--green)'; recvBox.style.background='rgba(61,255,154,.07)'; }
+              nvSetStatus('✓ Data delivered to application!', 'var(--green)');
+              const builder = document.getElementById('nv-packet-builder');
+              if(builder) builder.innerHTML = `
+                <div style="padding:16px;border:2px solid var(--green);background:rgba(61,255,154,.06);border-radius:4px;text-align:center;">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--dim);margin-bottom:6px;letter-spacing:1px;">APPLICATION DATA RECEIVED</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--green);font-weight:700;">"${payload}"</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--dim);margin-top:8px;">✓ All headers stripped · Payload intact</div>
+                </div>
+              `;
+            }, 400);
+          }
+        }, i * DECAP_DELAY);
+      });
+    });
+  }, afterEncap);
+}
+
+function initPacketProcessor(){
+  const processBtn=document.getElementById('process-packet');
+  if(processBtn && !processBtn._bound){
+    processBtn._bound=true;
+    processBtn.addEventListener('click', processPacket);
+  }
+  const stepBtn = document.getElementById('nv-step-btn');
+  if(stepBtn && !stepBtn._bound){
+    stepBtn._bound=true;
+    stepBtn.addEventListener('click', nvStep);
+  }
+  const resetBtn = document.getElementById('nv-reset-btn');
+  if(resetBtn && !resetBtn._bound){
+    resetBtn._bound=true;
+    resetBtn.addEventListener('click', nvReset);
+  }
+  const speedSlider = document.getElementById('nv-speed');
+  const speedLabel  = document.getElementById('nv-speed-label');
+  const speedNames  = {1:'SLOW', 2:'MODERATE', 3:'NORMAL', 4:'FAST', 5:'INSTANT'};
+  if(speedSlider && !speedSlider._bound){
+    speedSlider._bound=true;
+    speedSlider.addEventListener('input', () => {
+      if(speedLabel) speedLabel.textContent = speedNames[speedSlider.value] || 'NORMAL';
+    });
+  }
+  const simulateBtn=document.getElementById('simulate-packet');
+  if(simulateBtn && !simulateBtn._bound){
+    simulateBtn._bound=true;
+    simulateBtn.addEventListener('click',simulatePacket);
+  }
+}
+
+function displayTopology(topology){
+  const content=document.getElementById('topology-content');
+  const viz=document.getElementById('topology-viz');
+  const meta=TOPOLOGIES_META[topology];
+  if(!meta) return;
+
+  // Update sidebar info
+  if(content){
+    content.innerHTML=`
+      <div style="font-size:11px;line-height:1.7;color:var(--text);">${meta.desc}</div>
+      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div style="padding:6px 8px;background:rgba(0,0,0,.2);border:1px solid var(--b2);border-radius:3px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--dim);margin-bottom:2px;">FAULT TOL.</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${meta.color};">${meta.fault}</div>
+        </div>
+        <div style="padding:6px 8px;background:rgba(0,0,0,.2);border:1px solid var(--b2);border-radius:3px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--dim);margin-bottom:2px;">COST</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${meta.color};">${meta.cost}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Build large beautiful SVG visualization
+  const color = {
+    mesh:'#00e5ff', star:'#3dff9a', bus:'#ffaa00', ring:'#ff3ea5', tree:'#4d8fff', hybrid:'#bf4dff'
+  }[topology]||'#00e5ff';
+
+  const svgMap={
+    mesh: buildMeshSVG(color),
+    star: buildStarSVG(color),
+    bus: buildBusSVG(color),
+    ring: buildRingSVG(color),
+    tree: buildTreeSVG(color),
+    hybrid: buildHybridSVG(color)
+  };
+
+  if(viz){
+    viz.innerHTML=`
+      <div style="width:100%;padding:20px;display:flex;flex-direction:column;align-items:center;gap:16px;">
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:${color};letter-spacing:2px;text-transform:uppercase;">${meta.label} Topology</div>
+        ${svgMap[topology]||''}
+        <div style="display:flex;gap:16px;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);">
+          <span>${meta.nodes} nodes</span>
+          <span>·</span>
+          <span>${meta.connections} links</span>
+          <span>·</span>
+          <span style="color:${color};">${meta.speed} speed</span>
+        </div>
+      </div>
+    `;
+  }
+  
+  window.currentTopology = topology;
+  // Attach failure click handlers to nodes
+  setTimeout(attachNodeClickHandlers, 50);
+  window.failedNodes = new Set();
+  const failLog = document.getElementById('failure-log');
+  if(failLog) failLog.innerHTML = '<div style="color:var(--dim);text-align:center;padding:12px 0;">Click a node to simulate failure</div>';
+}
+
+function node(x,y,label,color,r=18,fontSize=10){
+  return `<g class="topo-node" data-device="${label}" style="cursor:pointer;">
+    <circle cx="${x}" cy="${y}" r="${r}" fill="rgba(0,0,0,.5)" stroke="${color}" stroke-width="2" opacity="0.9"/>
+    <circle cx="${x}" cy="${y}" r="${r-6}" fill="${color}" opacity="0.2"/>
+    <text x="${x}" y="${y+1}" text-anchor="middle" dominant-baseline="middle" fill="${color}" font-size="${fontSize}" font-family="JetBrains Mono,monospace" font-weight="700">${label.substring(0,3)}</text>
+  </g>`;
+}
+function link(x1,y1,x2,y2,color,anim=false){
+  const dash=anim?`stroke-dasharray="8,4"><animate attributeName="stroke-dashoffset" from="0" to="12" dur="1.2s" repeatCount="indefinite"/>`:' opacity="0.5"/>';
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2" ${dash}</line>`;
+}
+
+function buildMeshSVG(c){
+  const pts=[[200,60],[310,130],[290,240],[120,240],[80,130],[145,180]];
+  const labels=['PC1','PC2','PC3','PC4','PC5','SRV'];
+  let svg=`<svg width="380" height="300" viewBox="0 0 380 300" style="max-width:100%;">
+    <defs><filter id="glow${c.replace('#','')}"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  // All links
+  for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++)
+    svg+=link(pts[i][0],pts[i][1],pts[j][0],pts[j][1],c);
+  // Nodes
+  pts.forEach((p,i)=>svg+=node(p[0],p[1],labels[i],c));
+  svg+=`</svg>`;
+  return svg;
+}
+
+function buildStarSVG(c){
+  const cx=190,cy=150,r=100;
+  const spokes=[[cx,cy-r,'PC1'],[cx+r*0.866,cy-r*0.5,'PC2'],[cx+r*0.866,cy+r*0.5,'PC3'],[cx,cy+r,'PC4'],[cx-r*0.866,cy+r*0.5,'PC5'],[cx-r*0.866,cy-r*0.5,'PC6']];
+  let svg=`<svg width="380" height="300" viewBox="0 0 380 300" style="max-width:100%;">`;
+  spokes.forEach(([x,y])=>svg+=link(cx,cy,x,y,c,true));
+  svg+=node(cx,cy,'HUB',c,24,9);
+  spokes.forEach(([x,y,l])=>svg+=node(x,y,l,c));
+  svg+=`</svg>`;
+  return svg;
+}
+
+function buildBusSVG(c){
+  let svg=`<svg width="380" height="200" viewBox="0 0 380 200" style="max-width:100%;">`;
+  // Bus backbone
+  svg+=`<line x1="30" y1="100" x2="350" y2="100" stroke="${c}" stroke-width="5" opacity="0.7">
+    <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+  </line>`;
+  svg+=`<rect x="18" y="92" width="16" height="16" rx="3" fill="${c}" opacity="0.8"/>`;
+  svg+=`<rect x="346" y="92" width="16" height="16" rx="3" fill="${c}" opacity="0.8"/>`;
+  const nodes=[60,120,180,240,300];
+  const labels=['PC1','PC2','SRV','PC3','PC4'];
+  nodes.forEach((x,i)=>{
+    const above=i%2===0;
+    const y2=above?40:160;
+    svg+=link(x,100,x,y2,c,true);
+    svg+=node(x,y2,labels[i],c,16,9);
+  });
+  svg+=`</svg>`;
+  return svg;
+}
+
+function buildRingSVG(c){
+  const cx=190,cy=148,r=100;
+  const n=6;
+  const pts=Array.from({length:n},(_,i)=>{
+    const angle=(i/n)*Math.PI*2-Math.PI/2;
+    return [cx+r*Math.cos(angle),cy+r*Math.sin(angle)];
+  });
+  const labels=['PC1','PC2','PC3','PC4','PC5','PC6'];
+  let svg=`<svg width="380" height="296" viewBox="0 0 380 296" style="max-width:100%;">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-width="1" stroke-dasharray="6,4" opacity="0.2"/>`;
+  // Token animation
+  svg+=`<circle r="5" fill="${c}" opacity="0.9">
+    <animateMotion dur="3s" repeatCount="indefinite">
+      <mpath href="#ring-track"/>
+    </animateMotion>
+  </circle>
+  <path id="ring-track" d="M ${pts.map(p=>p.join(',')).join(' L ')} Z" fill="none"/>`;
+  pts.forEach((p,i)=>svg+=link(p[0],p[1],pts[(i+1)%n][0],pts[(i+1)%n][1],c,false));
+  pts.forEach((p,i)=>svg+=node(p[0],p[1],labels[i],c));
+  svg+=`</svg>`;
+  return svg;
+}
+
+function buildTreeSVG(c){
+  let svg=`<svg width="380" height="260" viewBox="0 0 380 260" style="max-width:100%;">`;
+  // Root
+  svg+=link(190,40,100,100,c); svg+=link(190,40,280,100,c);
+  // L2
+  svg+=link(100,100,60,170,c); svg+=link(100,100,140,170,c);
+  svg+=link(280,100,240,170,c); svg+=link(280,100,320,170,c);
+  // L3
+  svg+=link(60,170,40,230,c); svg+=link(60,170,80,230,c);
+  svg+=link(240,170,220,230,c); svg+=link(240,170,260,230,c);
+  // Nodes
+  svg+=node(190,40,'ROOT',c,20,8);
+  svg+=node(100,100,'SW1',c,18,8); svg+=node(280,100,'SW2',c,18,8);
+  svg+=node(60,170,'SW3',c,16,8); svg+=node(140,170,'PC1',c,16,8);
+  svg+=node(240,170,'PC2',c,16,8); svg+=node(320,170,'SW4',c,16,8);
+  svg+=node(40,230,'PC3',c,14,8); svg+=node(80,230,'PC4',c,14,8);
+  svg+=node(220,230,'PC5',c,14,8); svg+=node(260,230,'PC6',c,14,8);
+  svg+=`</svg>`;
+  return svg;
+}
+
+function buildHybridSVG(c){
+  const c2='#00e5ff';
+  let svg=`<svg width="380" height="280" viewBox="0 0 380 280" style="max-width:100%;">`;
+  // Star cluster left
+  svg+=link(100,80,50,150,c); svg+=link(100,80,100,150,c); svg+=link(100,80,150,150,c);
+  svg+=node(100,80,'HUB',c,18,8);
+  ['PC1','PC2','PC3'].forEach((l,i)=>svg+=node([50,100,150][i],150,l,c,14,8));
+  // Bus backbone
+  svg+=`<line x1="100" y1="80" x2="280" y2="80" stroke="${c2}" stroke-width="3" opacity="0.6">
+    <animate attributeName="opacity" values="0.4;0.9;0.4" dur="1.8s" repeatCount="indefinite"/>
+  </line>`;
+  // Ring cluster right
+  const rx=280,ry=140,rr=70;
+  const rpts=[[rx,ry-rr],[rx+rr*0.866,ry-rr*0.5],[rx+rr*0.866,ry+rr*0.5],[rx,ry+rr],[rx-rr*0.866,ry+rr*0.5]];
+  rpts.forEach((p,i)=>svg+=link(p[0],p[1],rpts[(i+1)%rpts.length][0],rpts[(i+1)%rpts.length][1],c));
+  rpts.forEach((p,i)=>svg+=node(p[0],p[1],['SV1','PC4','PC5','PC6','SV2'][i],c,14,8));
+  svg+=`</svg>`;
+  return svg;
+}
+
+
+function simulatePacket(){
+  const log=document.getElementById('packet-log');
+  const topology=window.currentTopology;
+  
+  if(!topology){
+    log.innerHTML='<div style="color:var(--pink);">⚠ Please select a topology first</div>';
+    return;
+  }
+  
+  log.innerHTML='';
+  const startTime=Date.now();
+  
+  const packetJourney={
+    mesh:[
+      {device:'PC1',action:'Creating packet',layer:'Application'},
+      {device:'PC1',action:'Adding TCP header',layer:'Transport'},
+      {device:'PC1',action:'Adding IP header',layer:'Network'},
+      {device:'PC1',action:'Adding frame header',layer:'Data Link'},
+      {device:'PC1',action:'Converting to bits',layer:'Physical'},
+      {device:'PC1→PC2',action:'Transmitting through mesh',layer:'Physical'},
+      {device:'PC2',action:'Receiving bits',layer:'Physical'},
+      {device:'PC2',action:'Converting to frame',layer:'Data Link'},
+      {device:'PC2',action:'Checking frame',layer:'Data Link'},
+      {device:'PC2',action:'Routing packet',layer:'Network'},
+      {device:'PC2',action:'Processing segment',layer:'Transport'},
+      {device:'PC2',action:'Delivering to application',layer:'Application'}
+    ],
+    star:[
+      {device:'PC1',action:'Creating packet',layer:'Application'},
+      {device:'PC1',action:'Adding TCP header',layer:'Transport'},
+      {device:'PC1',action:'Adding IP header',layer:'Network'},
+      {device:'PC1',action:'Adding frame header',layer:'Data Link'},
+      {device:'PC1',action:'Sending to hub',layer:'Physical'},
+      {device:'Hub',action:'Repeating frame to all ports',layer:'Physical'},
+      {device:'PC2',action:'Receiving frame',layer:'Physical'},
+      {device:'PC2',action:'Processing frame',layer:'Data Link'},
+      {device:'PC2',action:'Checking destination',layer:'Network'},
+      {device:'PC2',action:'Accepting packet',layer:'Transport'},
+      {device:'PC2',action:'Delivering data',layer:'Application'}
+    ],
+    bus:[
+      {device:'PC1',action:'Creating packet',layer:'Application'},
+      {device:'PC1',action:'Adding headers',layer:'Transport/Network'},
+      {device:'PC1',action:'Placing on bus',layer:'Physical'},
+      {device:'Bus',action:'Broadcasting to all devices',layer:'Physical'},
+      {device:'PC2',action:'Detecting address match',layer:'Data Link'},
+      {device:'PC2',action:'Reading from bus',layer:'Physical'},
+      {device:'PC2',action:'Processing packet',layer:'Network'},
+      {device:'PC2',action:'Delivering to application',layer:'Application'}
+    ],
+    ring:[
+      {device:'PC1',action:'Creating packet',layer:'Application'},
+      {device:'PC1',action:'Adding token',layer:'Data Link'},
+      {device:'PC1',action:'Placing on ring',layer:'Physical'},
+      {device:'PC1→PC2',action:'Passing token clockwise',layer:'Physical'},
+      {device:'PC2',action:'Receiving token',layer:'Data Link'},
+      {device:'PC2',action:'Checking destination',layer:'Network'},
+      {device:'PC2',action:'Processing packet',layer:'Transport'},
+      {device:'PC2',action:'Accepting data',layer:'Application'}
+    ],
+    tree:[
+      {device:'PC1',action:'Creating packet',layer:'Application'},
+      {device:'PC1',action:'Adding headers',layer:'Transport/Network'},
+      {device:'PC1',action:'Sending to switch',layer:'Data Link'},
+      {device:'SW1',action:'Forwarding to root',layer:'Network'},
+      {device:'Root',action:'Routing to SW2',layer:'Network'},
+      {device:'SW2',action:'Forwarding to PC2',layer:'Data Link'},
+      {device:'PC2',action:'Receiving packet',layer:'Physical'},
+      {device:'PC2',action:'Processing headers',layer:'Network'},
+      {device:'PC2',action:'Delivering to app',layer:'Application'}
+    ],
+    hybrid:[
+      {device:'PC1',action:'Creating packet',layer:'Application'},
+      {device:'PC1',action:'Adding headers',layer:'Transport/Network'},
+      {device:'PC1',action:'Sending to SW1',layer:'Data Link'},
+      {device:'SW1',action:'Hybrid routing decision',layer:'Network'},
+      {device:'Hub',action:'Broadcasting in star segment',layer:'Physical'},
+      {device:'PC2',action:'Receiving from hub',layer:'Physical'},
+      {device:'PC2',action:'Processing packet',layer:'Network'},
+      {device:'PC2',action:'Accepting data',layer:'Application'}
+    ]
+  };
+  
+  const journey=packetJourney[topology]||packetJourney.star;
+  
+  function addLogEntry(entry,index){
+    setTimeout(()=>{
+      const timestamp=new Date().toLocaleTimeString();
+      const layerColors={
+        'Application':'var(--l7)',
+        'Transport':'var(--l4)',
+        'Network':'var(--l3)',
+        'Data Link':'var(--l2)',
+        'Physical':'var(--l1)'
+      };
+      
+      const logEntry=document.createElement('div');
+      const lc=layerColors[entry.layer]||'var(--dim)';
+      logEntry.style.cssText=`margin-bottom:3px;padding:4px 6px;border-left:2px solid ${lc};background:rgba(0,0,0,.15);display:flex;gap:6px;align-items:baseline;`;
+      logEntry.innerHTML=`
+        <span style="color:var(--dim);font-size:6px;white-space:nowrap;">${timestamp}</span>
+        <span style="color:var(--bright);font-size:8px;font-weight:700;white-space:nowrap;">${entry.device}</span>
+        <span style="color:var(--text);font-size:8px;flex:1;">→ ${entry.action}</span>
+        <span style="color:${lc};font-size:6px;white-space:nowrap;padding:1px 4px;border:1px solid ${lc}44;">${entry.layer}</span>
+      `;
+      
+      log.appendChild(logEntry);
+      log.scrollTop=log.scrollHeight;
+      
+      // Highlight device in visualization
+      if(entry.device && !entry.device.includes('→')){
+        highlightDevice(entry.device);
+      }
+    },index*800);
+  }
+  
+  journey.forEach((entry,index)=>addLogEntry(entry,index));
+  
+  // Final completion message
+  setTimeout(()=>{
+    const completion=document.createElement('div');
+    completion.style.cssText='margin-top:8px;padding:6px;background:rgba(61,255,154,.1);border:1px solid rgba(61,255,154,.3);text-align:center;';
+    completion.innerHTML='<span style="color:var(--green);font-weight:700;">✓ Packet delivered successfully!</span>';
+    log.appendChild(completion);
+    log.scrollTop=log.scrollHeight;
+  },journey.length*800);
+}
+
+function highlightDevice(deviceName){
+  const viz=document.getElementById('topology-viz');
+  const svg=viz.querySelector('svg');
+  if(!svg) return;
+  
+  // Remove previous highlights
+  svg.querySelectorAll('.topo-node,.highlighted').forEach(el=>{
+    el.querySelectorAll('circle').forEach(c=>{c.style.filter=''; c.style.transition=''});
+    el.classList.remove('highlighted');
+  });
+  
+  // Find and highlight the device
+  const devices=svg.querySelectorAll('[data-device]');
+  devices.forEach(device=>{
+    if(device.getAttribute('data-device')===deviceName){
+      device.classList.add('highlighted');
+      const circles=device.querySelectorAll('circle');
+      circles.forEach(c=>{
+        c.style.filter=`drop-shadow(0 0 10px ${c.getAttribute('stroke')||'#00e5ff'})`;
+        c.style.transition='all 0.2s';
+      });
+      setTimeout(()=>{
+        circles.forEach(c=>{ c.style.filter=''; });
+        device.classList.remove('highlighted');
+      },700);
+    }
+  });
+}
+
+// ════════════════ FAILURE SIMULATION ════════════════
+window.failedNodes = new Set();
+
+// Per-topology failure impact rules
+const FAILURE_RULES = {
+  mesh: (node, allNodes) => {
+    // Mesh: only that node is affected; others reroute
+    return {
+      failed: [node],
+      degraded: [],
+      messages: [
+        {type:'fail', text:`Node ${node} ▼ DOWN — failure detected`},
+        {type:'info', text:`Mesh rerouting: alternate paths available`},
+        {type:'ok',   text:`All other nodes remain operational — no impact`}
+      ]
+    };
+  },
+  star: (node, allNodes) => {
+    if(node === 'HUB') {
+      // Hub failure = entire network down
+      const others = allNodes.filter(n=>n!=='HUB');
+      return {
+        failed: [node],
+        degraded: others,
+        messages: [
+          {type:'fail', text:`HUB ▼ DOWN — central point of failure!`},
+          {type:'fail', text:`CRITICAL: Entire network disrupted`},
+          ...others.map(n=>({type:'warn', text:`Node ${n} — isolated, cannot communicate`}))
+        ]
+      };
+    } else {
+      return {
+        failed: [node],
+        degraded: [],
+        messages: [
+          {type:'fail', text:`Node ${node} ▼ DOWN`},
+          {type:'ok',   text:`HUB remains active — other nodes unaffected`},
+          {type:'info', text:`Only ${node} loses connectivity`}
+        ]
+      };
+    }
+  },
+  bus: (node, allNodes) => {
+    // Bus backbone endpoints (terminators) = whole network down
+    // SRV failure = significant service disruption
+    if(node === 'SRV') {
+      return {
+        failed: [node],
+        degraded: [],
+        messages: [
+          {type:'fail', text:`SRV ▼ DOWN — server offline`},
+          {type:'warn', text:`Services disrupted — clients cannot reach server`},
+          {type:'ok',   text:`Bus backbone intact — PCs can still communicate`}
+        ]
+      };
+    }
+    return {
+      failed: [node],
+      degraded: [],
+      messages: [
+        {type:'fail', text:`Node ${node} ▼ DOWN`},
+        {type:'ok',   text:`Bus backbone intact — remaining nodes unaffected`},
+        {type:'info', text:`${node} simply stops transmitting on the bus`}
+      ]
+    };
+  },
+  ring: (node, allNodes) => {
+    // Ring: one failure breaks the ring for all downstream nodes (unidirectional)
+    // Determine clockwise order
+    const ringOrder = ['PC1','PC2','PC3','PC4','PC5','PC6'];
+    const idx = ringOrder.indexOf(node);
+    // Nodes "after" the failed node in the ring lose connectivity
+    const affected = idx >= 0
+      ? ringOrder.filter((_,i) => i > idx)
+      : ringOrder.filter(n => n !== node);
+    return {
+      failed: [node],
+      degraded: affected,
+      messages: [
+        {type:'fail', text:`Node ${node} ▼ DOWN — ring broken!`},
+        {type:'fail', text:`RING FAILURE: token cannot pass through ${node}`},
+        ...affected.map(n=>({type:'warn', text:`Node ${n} — unreachable (downstream of break)`})),
+        affected.length === 0
+          ? {type:'ok', text:'No downstream nodes affected'}
+          : {type:'fail', text:`${affected.length} node(s) isolated — entire ring disrupted`}
+      ]
+    };
+  },
+  tree: (node, allNodes) => {
+    // Tree: parent node failure takes down all children
+    const hierarchy = {
+      ROOT: ['SW1','SW2','SW3','PC1','PC2','SW4','PC3','PC4','PC5','PC6'],
+      SW1:  ['SW3','PC1'],
+      SW2:  ['PC2','SW4'],
+      SW3:  ['PC3','PC4'],
+      SW4:  ['PC5','PC6']
+    };
+    const children = hierarchy[node] || [];
+    return {
+      failed: [node],
+      degraded: children,
+      messages: [
+        {type:'fail', text:`Node ${node} ▼ DOWN`},
+        children.length > 0
+          ? {type:'fail', text:`TREE FAILURE: ${children.length} downstream node(s) isolated`}
+          : {type:'ok',   text:`Leaf node — no downstream impact`},
+        ...children.map(n=>({type:'warn', text:`Node ${n} — unreachable (parent failed)`}))
+      ]
+    };
+  },
+  hybrid: (node, allNodes) => {
+    if(node === 'HUB') {
+      return {
+        failed: [node],
+        degraded: ['PC1','PC2','PC3'],
+        messages: [
+          {type:'fail', text:`HUB ▼ DOWN — star segment collapsed`},
+          {type:'warn', text:`PC1, PC2, PC3 — isolated from network`},
+          {type:'ok',   text:`Ring segment (SV1,PC4-6,SV2) unaffected`}
+        ]
+      };
+    }
+    const ringNodes = ['SV1','PC4','PC5','PC6','SV2'];
+    const starNodes = ['PC1','PC2','PC3'];
+    if(ringNodes.includes(node)) {
+      const idx = ringNodes.indexOf(node);
+      const downstream = ringNodes.filter((_,i)=>i>idx);
+      return {
+        failed: [node],
+        degraded: downstream,
+        messages: [
+          {type:'fail', text:`Node ${node} ▼ DOWN — ring segment broken`},
+          ...downstream.map(n=>({type:'warn', text:`Node ${n} — downstream, unreachable via ring`})),
+          {type:'ok',   text:`Star segment (HUB + PCs) unaffected`}
+        ]
+      };
+    }
+    return {
+      failed: [node],
+      degraded: [],
+      messages: [
+        {type:'fail', text:`Node ${node} ▼ DOWN`},
+        {type:'ok',   text:`HUB active — other star nodes unaffected`},
+        {type:'ok',   text:`Ring segment unaffected`}
+      ]
+    };
+  }
+};
+
+function applyNodeFailure(nodeLabel) {
+  const topology = window.currentTopology;
+  if(!topology) return;
+  
+  const viz = document.getElementById('topology-viz');
+  const log = document.getElementById('failure-log');
+  if(!viz || !log) return;
+  
+  // If already failed, clicking again recovers it
+  if(window.failedNodes.has(nodeLabel)) {
+    recoverNode(nodeLabel);
+    return;
+  }
+  
+  window.failedNodes.add(nodeLabel);
+  
+  // Get all node labels in current SVG
+  const allNodeEls = viz.querySelectorAll('[data-device]');
+  const allNodeLabels = [...allNodeEls].map(el=>el.getAttribute('data-device'));
+  
+  const rules = FAILURE_RULES[topology];
+  if(!rules) return;
+  const result = rules(nodeLabel, allNodeLabels);
+  
+  // Apply visual states
+  allNodeEls.forEach(el => {
+    const label = el.getAttribute('data-device');
+    if(result.failed.includes(label)) {
+      el.classList.remove('degraded');
+      el.classList.add('failed');
+      // Override circle styles inline for SVG
+      const circles = el.querySelectorAll('circle');
+      if(circles[0]) { circles[0].setAttribute('stroke','#ff3333'); circles[0].setAttribute('fill','rgba(220,20,20,.35)'); }
+      if(circles[1]) circles[1].setAttribute('fill','rgba(255,30,30,.35)');
+      const txt = el.querySelector('text');
+      if(txt) txt.setAttribute('fill','#ff5555');
+    } else if(result.degraded.includes(label)) {
+      el.classList.remove('failed');
+      el.classList.add('degraded');
+      const circles = el.querySelectorAll('circle');
+      if(circles[0]) { circles[0].setAttribute('stroke','#ffaa00'); }
+      if(circles[1]) circles[1].setAttribute('fill','rgba(255,170,0,.2)');
+      const txt = el.querySelector('text');
+      if(txt) txt.setAttribute('fill','#ffcc44');
+    }
+  });
+  
+  // Log entries with staggered timing
+  log.innerHTML = '';
+  const ts = new Date().toLocaleTimeString();
+  result.messages.forEach((msg, i) => {
+    setTimeout(() => {
+      const entry = document.createElement('div');
+      entry.style.cssText = 'margin-bottom:3px;padding:3px 6px;display:flex;gap:5px;align-items:baseline;border-left:2px solid;';
+      const colors = {fail:'#ff4444', warn:'#ffaa00', ok:'#3dff9a', info:'#00e5ff'};
+      const icons  = {fail:'✖', warn:'⚠', ok:'✓', info:'ℹ'};
+      const clr = colors[msg.type]||'#aaa';
+      entry.style.borderLeftColor = clr;
+      entry.innerHTML = `
+        <span style="color:var(--dim);font-size:6px;white-space:nowrap;">${ts}</span>
+        <span style="color:${clr};font-size:8px;font-weight:700;">${icons[msg.type]||'·'}</span>
+        <span style="color:${clr==='#ff4444'?'#ff8888':msg.type==='warn'?'#ffcc44':msg.type==='ok'?'#3dff9a':'#77ddff'};font-size:7.5px;flex:1;">${msg.text}</span>
+      `;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }, i * 180);
+  });
+}
+
+function recoverNode(nodeLabel) {
+  window.failedNodes.delete(nodeLabel);
+  const viz = document.getElementById('topology-viz');
+  const log = document.getElementById('failure-log');
+  
+  // Redraw topology to restore original colors
+  if(window.currentTopology) {
+    displayTopology(window.currentTopology);
+    // Re-fail any still-failed nodes
+    const stillFailed = new Set(window.failedNodes);
+    window.failedNodes.clear();
+    stillFailed.forEach(n => applyNodeFailure(n));
+  }
+  
+  const entry = document.createElement('div');
+  entry.style.cssText = 'margin-bottom:3px;padding:3px 6px;display:flex;gap:5px;align-items:baseline;border-left:2px solid #3dff9a;';
+  entry.innerHTML = `<span style="color:var(--dim);font-size:6px;">${new Date().toLocaleTimeString()}</span><span style="color:#3dff9a;font-size:8px;">↑</span><span style="color:#3dff9a;font-size:7.5px;">Node ${nodeLabel} RESTORED — back online</span>`;
+  if(log) { log.appendChild(entry); log.scrollTop = log.scrollHeight; }
+}
+
+function attachNodeClickHandlers() {
+  const viz = document.getElementById('topology-viz');
+  if(!viz) return;
+  viz.querySelectorAll('[data-device]').forEach(el => {
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      applyNodeFailure(el.getAttribute('data-device'));
+    });
+  });
+}
+
+// Patch displayTopology to attach click handlers after render + reset failures
+const _origDisplayTopology = displayTopology;
+// We'll override it after definition - patch via wrapper
+window._origDisplayTopology = null;
 
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
 
@@ -660,6 +1855,8 @@ document.getElementById('btn-toggle').addEventListener('click',()=>{
   buildLayers();
   const toggleBtn=document.getElementById('btn-toggle');
   toggleBtn.textContent=reverseLayerOrder?'⇆ DIRECTION':'⇅ DIRECTION';
+  const currentLayer=LAYERS.find(l=>l.n===currentLayerNum);
+  if(currentLayer)showDetail(currentLayer);
 });
 
 document.getElementById('btn-quiz').addEventListener('click',startQuiz);
@@ -669,10 +1866,19 @@ document.getElementById('btn-reset').addEventListener('click',()=>{
   document.getElementById('det-wrap').classList.remove('show');
 });
 
+// Reset failures button
+document.addEventListener('click', e => {
+  if(e.target && e.target.id === 'reset-failures') {
+    window.failedNodes = new Set();
+    if(window.currentTopology) {
+      displayTopology(window.currentTopology);
+    }
+  }
+});
+
 buildLayers();
 buildReference();
 buildComparison();
-showDetail(LAYERS[0]);
 </script>
  </body>
 </html>
